@@ -1,61 +1,95 @@
-# gestion_clientes.py
+# Con este codigo se cargan los datos en SQL desde Python
 
-clientes = []  # Lista simulada para pruebas (luego se puede conectar a SQL)
+from conexion_base_datos import obtener_conexion
 
 def gestionar_clientes():
     print("\n-- GESTIONAR CLIENTES --")
-    print("1. Ver Clientes")
-    print("2. Agregar Cliente")
-    print("3. Modificar Cliente")
-    print("4. Eliminar Cliente")
-    print("5. Volver al Menú Principal")
-    subopcion = input("Selecciona una opción del submenú: ")
+    print("1. Agregar Cliente")
+    print("2. Ver Clientes")
+    print("3. Modificar cliente")
+    print("4. Eliminar cliente")
+    print("5. Volver al menú principal")
+    subopcion = input("Selecciona una opción: ")
 
     if subopcion == "1":
-        print("\n Lista de Clientes:")
-        if not clientes:
-            print("No hay clientes cargados")   #si no hay clientes cargados, que lo indique
-        else:
-            for i, c in enumerate(clientes, start=1):   #i es el contador automatico de iteraciones, y cada elemento de la lista de clientes. Cada cliente es un diccionario.
-                print(f"{i}. Razón Social: {c['razon_social']}, CUIT: {c['cuit']}, Email: {c['email']}")
+        razon_social = input("Razón social: ")
+        cuit = input("CUIT: ")
+        email = input("Email: ")
 
+        conexion = obtener_conexion()
+        if conexion:
+            try:
+                cursor = conexion.cursor()
+                query = "INSERT INTO clientes (razon_social, cuit, email) VALUES (%s, %s, %s)"
+                valores = (razon_social, cuit, email)
+                cursor.execute(query, valores)
+                conexion.commit()
+                print("Cliente guardado en la base de datos")
+            except Exception as e:
+                print("Error al guardar el cliente:", e)
+            finally:
+                conexion.close()
+
+#Para la opcion 2, se conecta a la base, hace una consulta: SELECT id_cliente, razon_social, cuit, email FROM clientes y lo muestra.
     elif subopcion == "2":
-        razon_social = input("Razón social del cliente: ")
-        cuit = input("CUIT del cliente: ")
-        email = input("Email del cliente: ")
-        cliente = {"razon_social": razon_social, "cuit": cuit, "email": email}
-        clientes.append(cliente)
-        print("Cliente agregado correctamente")
+        conexion = obtener_conexion()
+    if conexion:
+        try:
+            cursor = conexion.cursor()
+            cursor.execute("SELECT id_Cliente, razon_social, cuit, email FROM clientes")
+            resultados = cursor.fetchall()
 
+            if resultados:
+                print("\n Lista de Clientes:")
+                for cliente in resultados:
+                    id_cliente, razon_social, cuit, email = cliente
+                    print(f"ID_Cliente: {id_cliente} | {razon_social} | CUIT: {cuit} | Email: {email}")
+            else:
+                print("No hay clientes registrados en la base de datos.")
+
+        except Exception as e:
+            print("Error al obtener los clientes:", e)
+        finally:
+            conexion.close()
+
+#opcion 3 Modificar clientes
     elif subopcion == "3":
-        if not clientes:
-            print("No hay clientes cargados")  #se continua contemplando la opcion de que no haya clientes cargados
-            return
-        for i, c in enumerate(clientes, start=1):
-            print(f"{i}. {c['razon_social']} ({c['cuit']})")
-        num = int(input("Ingrese el número del cliente a modificar: ")) - 1
-        if 0 <= num < len(clientes):
-            clientes[num]["razon_social"] = input("Nuevo nombre: ")
-            clientes[num]["cuit"] = input("Nuevo CUIT: ")
-            clientes[num]["email"] = input("Nuevo email: ")
-            print("Cliente modificado")
-        else:
-            print("Número de cliente inválido")
+     conexion = obtener_conexion()  
+    if conexion:
+        try:
+            cursor = conexion.cursor()
 
-    elif subopcion == "4":
-        if not clientes:
-            print("No hay clientes cargados")
-            return
-        for i, c in enumerate(clientes, start=1):
-            print(f"{i}. {c['razon_social']} ({c['cuit']})")
-        num = int(input("Ingrese el número del cliente a eliminar: ")) - 1
-        if 0 <= num < len(clientes):
-            eliminado = clientes.pop(num)
-            print(f"Cliente eliminado: {eliminado['razon_social']}")
-        else:
-            print("Número de cliente inválido")
+            # Mostrar clientes activos disponibles
+            cursor.execute("SELECT id, razon_social, cuit, email FROM clientes WHERE estado = 'activo'")
+            resultados = cursor.fetchall()
 
-    elif subopcion == "5":
-        print("Volviendo al menú principal...")
-    else:
-        print("Opción inválida")
+            if not resultados:
+                print("No hay clientes activos para modificar.")
+                return
+
+            print("\n📋 Clientes disponibles para modificar:")
+            for cliente in resultados:
+                print(f"ID: {cliente[0]} | {cliente[1]} | CUIT: {cliente[2]} | Email: {cliente[3]}")
+
+            # Selección de cliente por ID
+            cliente_id = input("Ingrese el ID del cliente a modificar: ")
+
+            # Ingreso de nuevos datos
+            nuevo_nombre = input("Nuevo nombre o razón social: ")
+            nuevo_cuit = input("Nuevo CUIT: ")
+            nuevo_email = input("Nuevo email: ")
+
+            # Actualización en base
+            query = "UPDATE clientes SET razon_social = %s, cuit = %s, email = %s WHERE id = %s"
+            valores = (nuevo_nombre, nuevo_cuit, nuevo_email, cliente_id)
+            cursor.execute(query, valores)
+            conexion.commit()
+
+            print("✅ Cliente modificado correctamente.")
+
+        except Exception as e:
+            print("❌ Error al modificar el cliente:", e)
+        finally:
+            conexion.close()
+
+        
